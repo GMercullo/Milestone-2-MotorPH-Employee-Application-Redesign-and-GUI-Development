@@ -8,22 +8,29 @@ import java.util.*;
 
 public class Employee {
 
+    // A map to store employee data with employee ID as the key
     private Map<Integer, EmployeeData> employeeMap = new HashMap<>();
 
+    // Default constructor
     public Employee() {
     }
 
+    // Loads employee details from an Excel file (.xlsx format)
     public void loadEmployeesFromExcel(String filePath) {
-        try (FileInputStream fis = new FileInputStream(new File(filePath));
-             Workbook workbook = new XSSFWorkbook(fis)) {
-
+        try (
+            FileInputStream fis = new FileInputStream(new File(filePath));
+            Workbook workbook = new XSSFWorkbook(fis)
+        ) {
+            // Access the specific sheet named "Employee Details"
             Sheet sheet = workbook.getSheet("Employee Details");
 
+            // Loop through each row starting from row 1 (row 0 is usually headers)
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
-                if (row == null) continue;
+                if (row == null) continue; // skip if row is empty
 
                 try {
+                    // Extract employee data from each cell in the row
                     int employeeId = (int) getNumericCellValue(row.getCell(0));
                     String lastName = getStringCellValue(row.getCell(1));
                     String firstName = getStringCellValue(row.getCell(2));
@@ -44,8 +51,10 @@ public class Employee {
                     double grossSemiMonthlyRate = getNumericCellValue(row.getCell(17));
                     double hourlyRate = getNumericCellValue(row.getCell(18));
 
+                    // Combine first and last name for full name
                     String fullName = firstName + " " + lastName;
 
+                    // Create an EmployeeData object with the extracted details
                     EmployeeData emp = new EmployeeData(
                         employeeId,
                         fullName,
@@ -67,49 +76,61 @@ public class Employee {
                         hourlyRate
                     );
 
+                    // Debug output to indicate the employee is successfully loaded
                     System.out.println("Loaded employee ID: " + employeeId);
+
+                    // Add the employee data to the map for later access
                     employeeMap.put(employeeId, emp);
 
                 } catch (Exception ex) {
+                    // Catch any exception while processing a row and skip that row
                     System.out.println("Skipping row " + i + ": " + ex.getMessage());
                 }
             }
 
         } catch (Exception e) {
+            // Print stack trace if something goes wrong with file reading or workbook handling
             e.printStackTrace();
         }
     }
 
-
+    // Converts a phone number string to an integer (removes non-digit characters)
     private int parsePhoneToInt(String phone) {
         try {
             return Integer.parseInt(phone.replaceAll("[^\\d]", ""));
         } catch (NumberFormatException e) {
-            return 0;
+            return 0; // return 0 if parsing fails
         }
     }
 
+    // Retrieves employee data by ID
     public EmployeeData getEmployeeById(int id) {
         return employeeMap.get(id);
     }
-    private String getStringCellValue(Cell cell) {
-    if (cell == null) return "";
-    return switch (cell.getCellType()) {
-        case STRING -> cell.getStringCellValue().trim();
-        case NUMERIC -> String.valueOf((long) cell.getNumericCellValue()); // handles ID/phone as integers
-        case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
-        case FORMULA -> cell.getCellFormula();
-        default -> "";
-    };
-}
 
+    // Safely gets the string value from a cell
+    private String getStringCellValue(Cell cell) {
+        if (cell == null) return "";
+
+        // Handle different types of cell content
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue().trim(); // regular string
+            case NUMERIC -> String.valueOf((long) cell.getNumericCellValue()); // convert number to string
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue()); // convert boolean to string
+            case FORMULA -> cell.getCellFormula(); // return the formula itself
+            default -> "";
+        };
+    }
+
+    // Safely gets numeric value from a cell and handles edge cases like strings with symbols
     private double getNumericCellValue(Cell cell) {
         if (cell == null) return 0.0;
 
         return switch (cell.getCellType()) {
-            case NUMERIC -> cell.getNumericCellValue();
+            case NUMERIC -> cell.getNumericCellValue(); // if already numeric
             case STRING -> {
-                String cleaned = cell.getStringCellValue().replaceAll("[^\\d.-]", "");  // remove ₱, commas, etc.
+                // Remove non-numeric characters like ₱ or commas
+                String cleaned = cell.getStringCellValue().replaceAll("[^\\d.-]", "");
                 try {
                     yield Double.parseDouble(cleaned);
                 } catch (NumberFormatException e) {
@@ -124,9 +145,7 @@ public class Employee {
                     yield 0.0;
                 }
             }
-            default -> 0.0;
+            default -> 0.0; // if it's a blank or unsupported type
         };
-}
-
-
+    }
 }
