@@ -3,6 +3,8 @@ package com.mycompany.hw2;
 import java.util.Date;
 
 public class EmployeeData {
+
+    // Fields to store basic employee information and government IDs
     private int employeeId;
     private String fullName;
     private Date birthDate;
@@ -12,9 +14,13 @@ public class EmployeeData {
     private String philHealthNumber;
     private String tinNumber;
     private String pagIbigNumber;
+
+    // Fields for employment-related details
     private String status;
     private String position;
     private String departmentSupervisor;
+
+    // Fields for salary and allowance information
     private double basicSalary;
     private double riceSubsidy;
     private double phoneAllowance;
@@ -22,6 +28,7 @@ public class EmployeeData {
     private double grossSemiMonthlyRate;
     private double hourlyRate;
 
+    // Constructor that initializes all the fields
     public EmployeeData(
         int employeeId,
         String fullName,
@@ -62,7 +69,7 @@ public class EmployeeData {
         this.hourlyRate = hourlyRate;
     }
 
-    // Getters
+    // Getter methods for accessing private fields
     public int getEmployeeId() { return employeeId; }
     public String getFullName() { return fullName; }
     public Date getBirthDate() { return birthDate; }
