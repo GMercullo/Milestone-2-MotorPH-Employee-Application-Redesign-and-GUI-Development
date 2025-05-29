@@ -103,7 +103,7 @@ public class HW2 extends JFrame {
         detailsPanel.add(new JLabel("Phone Allowance: " + Format.format(emp.getPhoneAllowance())));
         detailsPanel.add(new JLabel("Clothing Allowance: " + Format.format(emp.getClothingAllowance())));
         detailsPanel.add(new JLabel("Gross Semi-Monthly: " + Format.format(emp.getGrossSemiMonthlyRate())));
-        detailsPanel.add(new JLabel("Hourly Rate: " + Format.format(emp.getHourlyRate())));
+        detailsPanel.add(new JLabel("Hourly Rate: " + String.format("%.2f", emp.getHourlyRate())));
 
         // Refresh the panel to show new data
         detailsPanel.revalidate();
