@@ -42,11 +42,6 @@ public class HW2 extends JFrame {
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
 
-        // Panel that will show employee details when found
-        detailsPanel = new JPanel();
-        detailsPanel.setLayout(new GridLayout(0, 1, 5, 5)); // Vertical list layout
-        detailsPanel.setBorder(BorderFactory.createTitledBorder("Employee Details:"));
-
         // Add panels to the main frame using BorderLayout
         setLayout(new BorderLayout(10, 10));
         add(titleLabel, BorderLayout.NORTH);
@@ -77,7 +72,12 @@ public class HW2 extends JFrame {
      */
     private void displayEmployee(EmployeeData emp) {
         detailsPanel.removeAll(); // Clear previous content
-
+        
+        // Panel that will show employee details when found
+        detailsPanel = new JPanel();
+        detailsPanel.setLayout(new GridLayout(0, 1, 5, 5)); // Vertical list layout
+        detailsPanel.setBorder(BorderFactory.createTitledBorder("Employee Details:"));
+        
         // Format birth date to readable form
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy");
         String formattedBirthDate = dateFormat.format(emp.getBirthDate());
