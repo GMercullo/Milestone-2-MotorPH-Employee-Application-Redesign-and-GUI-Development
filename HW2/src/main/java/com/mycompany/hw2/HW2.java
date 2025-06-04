@@ -220,19 +220,21 @@ public class HW2 extends JFrame {
         int result = JOptionPane.showConfirmDialog(this, panel, "Enter Month", JOptionPane.OK_CANCEL_OPTION);
         
         if (result == JOptionPane.OK_OPTION) {
-            String month = monthField.getText().trim();
-            if (!month.isEmpty()) {
-                try {
-                    PayrollService(emp, month);
-                } catch (DateTimeParseException ex) {
-                    JOptionPane.showMessageDialog(this, "Invalid format. Please use yyyy-MM.");
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "Please enter a month.");
+        String month = monthField.getText().trim();
+        if (!month.isEmpty()) {
+            try {
+                // Validate format first
+                YearMonth.parse(month); 
+                // If no exception, proceed with payroll
+                PayrollService(emp, month);
+            } catch (DateTimeParseException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid format. Please use yyyy-MM.");
             }
+        } else {
+            JOptionPane.showMessageDialog(this, "Please enter a month.");
         }
     }
-
+}
     private void PayrollService(EmployeeData empData, String monthInput) {
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
