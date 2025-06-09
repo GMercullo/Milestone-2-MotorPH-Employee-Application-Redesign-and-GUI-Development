@@ -21,6 +21,8 @@ public class NewEmployeeRecord extends JDialog {
     private JTextField salaryField, riceField, phoneAllowanceField, clothingField, hourlyRateField;
 
     private EmployeeData newEmployee;
+    private boolean updateMode = false;
+    private EmployeeData employeeToUpdate;
 
     public NewEmployeeRecord(JFrame parent) {
         super(parent, "Add New Employee", true);
@@ -69,6 +71,58 @@ public class NewEmployeeRecord extends JDialog {
         add(form, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
     }
+    
+    // Overloaded constructor for "Edit Employee"
+    public NewEmployeeRecord(JFrame parent, EmployeeData existingEmp) {
+        this(parent); // Call base constructor
+        this.updateMode = true;
+        this.employeeToUpdate = existingEmp;
+
+
+        setTitle("Edit Employee");
+
+        idField.setText(String.valueOf(existingEmp.getEmployeeId()));
+        idField.setEditable(true); // Prevent editing ID
+        firstNameField.setText(existingEmp.getFirstName());
+        lastNameField.setText(existingEmp.getLastName());
+        birthDateField.setText(new SimpleDateFormat("MM/dd/yyyy").format(existingEmp.getBirthDate()));
+        phoneField.setText(existingEmp.getPhoneNumber());
+        addressField.setText(existingEmp.getAddress());
+        positionField.setText(existingEmp.getPosition());
+        statusField.setText(existingEmp.getStatus());
+        supervisorField.setText(existingEmp.getSupervisor());
+
+        GovernmentDetails gov = existingEmp.getGovernmentDetails();
+        sssField.setText(gov.getSssNumber());
+        philHealthField.setText(gov.getPhilHealthNumber());
+        tinField.setText(gov.getTinNumber());
+        pagIbigField.setText(gov.getPagIbigNumber());
+
+        CompensationDetails comp = existingEmp.getCompensation();
+        salaryField.setText(String.valueOf(comp.getBasicSalary()));
+        riceField.setText(String.valueOf(comp.getRiceSubsidy()));
+        phoneAllowanceField.setText(String.valueOf(comp.getPhoneAllowance()));
+        clothingField.setText(String.valueOf(comp.getClothingAllowance()));
+        hourlyRateField.setText(String.valueOf(comp.getHourlyRate()));
+        
+        JPanel buttonPanel = new JPanel();
+        JButton actionButton = new JButton(updateMode ? "Update" : "Save");
+        JButton cancelButton = new JButton("Cancel");
+
+        if (updateMode) {
+            actionButton.addActionListener(this::onUpdate);
+        } else {
+            actionButton.addActionListener(this::onSave);
+        }
+
+        cancelButton.addActionListener(e -> dispose());
+
+        buttonPanel.add(actionButton);
+        buttonPanel.add(cancelButton);
+
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
 
     private void onSave(ActionEvent e) {
         try {
@@ -131,6 +185,67 @@ public class NewEmployeeRecord extends JDialog {
             ex.printStackTrace();
         }
     }
+    
+    private void onUpdate(ActionEvent e) {
+    try {
+        int id = parseIntField(idField, "Employee ID");
+
+        // Get updated values from input fields
+        String firstName = getTrimmedText(firstNameField);
+        String lastName = getTrimmedText(lastNameField);
+        String phone = getTrimmedText(phoneField);
+        String address = getTrimmedText(addressField);
+        String position = getTrimmedText(positionField);
+        String status = getTrimmedText(statusField);
+        String supervisor = getTrimmedText(supervisorField);
+
+        Date birthDate = parseDateField(birthDateField, "Birthdate (MM/DD/YYYY)");
+
+        GovernmentDetails gov = new GovernmentDetails(
+            getTrimmedText(sssField),
+            getTrimmedText(philHealthField),
+            getTrimmedText(tinField),
+            getTrimmedText(pagIbigField)
+        );
+
+        double basic = parseDoubleField(salaryField, "Basic Salary");
+        double rice = parseDoubleField(riceField, "Rice Subsidy");
+        double phoneAllow = parseDoubleField(phoneAllowanceField, "Phone Allowance");
+        double clothing = parseDoubleField(clothingField, "Clothing Allowance");
+
+        double hourlyRate = parseDoubleField(hourlyRateField, "Hourly Rate");
+        double grossSemiMonthlyRate = basic / 2.0;
+
+        CompensationDetails comp = new CompensationDetails(
+            basic, rice, phoneAllow, clothing, grossSemiMonthlyRate, hourlyRate
+        );
+
+        EmployeeData updatedEmployee = new EmployeeData(
+            id, firstName, lastName, birthDate, address, phone,
+            status, position, supervisor, comp, gov
+        );
+
+        boolean success = updateEmployeeInCSV(updatedEmployee);
+
+        if (success) {
+            JOptionPane.showMessageDialog(this, "Employee updated successfully!");
+            dispose();
+        } else {
+            JOptionPane.showMessageDialog(this, "Employee ID " + id + " not found.");
+        }
+
+    } catch (NumberFormatException ex) {
+        JOptionPane.showMessageDialog(this, ex.getMessage());
+    } catch (ParseException ex) {
+        JOptionPane.showMessageDialog(this, ex.getMessage());
+    } catch (IOException ex) {
+        JOptionPane.showMessageDialog(this, "Failed to update employee data: " + ex.getMessage());
+        ex.printStackTrace();
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "An unexpected error occurred: " + ex.getMessage());
+        ex.printStackTrace();
+    }
+}
     
     private void saveEmployeeToCSV(EmployeeData emp) throws IOException {
     File file = new File(EMPLOYEE_CSV_FILE);
@@ -237,41 +352,106 @@ public class NewEmployeeRecord extends JDialog {
         return false;
     }
 
-    private void appendEmployeeToCSV(EmployeeData emp) throws IOException {
-        File file = new File(EMPLOYEE_CSV_FILE);
-        boolean writeHeader = !file.exists() || file.length() == 0;
+    private boolean updateEmployeeInCSV(EmployeeData updatedEmp) throws IOException, ParseException {
+    File inputFile = new File(EMPLOYEE_CSV_FILE);
+    File tempFile = new File("src/temp_employee_data.csv");
 
-        try (FileWriter fw = new FileWriter(file, true)) {
-            if (writeHeader) {
-                String header = "EmployeeID,LastName,FirstName,BirthDate,Address,Phone,Position,Status,Supervisor,SSS,PhilHealth,TIN,PagIbig,BasicSalary,RiceSubsidy,PhoneAllowance,ClothingAllowance";
-                fw.write(header + System.lineSeparator());
+    boolean found = false;
+
+    try (
+        BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+        CSVWriter writer = new CSVWriter(new FileWriter(tempFile))
+    ) {
+        String header = reader.readLine();
+        if (header != null) {
+            writer.writeNext(header.split(","));
+        }
+
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] tokens = line.split(",");
+
+            int currentId = Integer.parseInt(tokens[0].trim());
+            if (currentId == updatedEmp.getEmployeeId()) {
+                String birthDateStr = new SimpleDateFormat("MM/dd/yyyy").format(updatedEmp.getBirthDate());
+
+                writer.writeNext(new String[]{
+                    String.valueOf(updatedEmp.getEmployeeId()),
+                    updatedEmp.getLastName(),
+                    updatedEmp.getFirstName(),
+                    birthDateStr,
+                    updatedEmp.getAddress(),
+                    updatedEmp.getPhoneNumber(),
+                    updatedEmp.getPosition(),
+                    updatedEmp.getStatus(),
+                    updatedEmp.getSupervisor(),
+                    updatedEmp.getGovernmentDetails().getSssNumber(),
+                    updatedEmp.getGovernmentDetails().getPhilHealthNumber(),
+                    updatedEmp.getGovernmentDetails().getTinNumber(),
+                    updatedEmp.getGovernmentDetails().getPagIbigNumber(),
+                    String.valueOf(updatedEmp.getCompensation().getBasicSalary()),
+                    String.valueOf(updatedEmp.getCompensation().getRiceSubsidy()),
+                    String.valueOf(updatedEmp.getCompensation().getPhoneAllowance()),
+                    String.valueOf(updatedEmp.getCompensation().getClothingAllowance())
+                });
+                found = true;
+            } else {
+                writer.writeNext(tokens);
             }
-
-            String birthDateStr = new SimpleDateFormat("MM/DD/YYYY").format(emp.getBirthDate());
-
-            List<String> fields = new ArrayList<>();
-            fields.add(String.valueOf(emp.getEmployeeId()));
-            fields.add(emp.getLastName());
-            fields.add(emp.getFirstName());
-            fields.add(birthDateStr);
-            fields.add(emp.getAddress());
-            fields.add(emp.getPhoneNumber());
-            fields.add(emp.getPosition());
-            fields.add(emp.getStatus());
-            fields.add(emp.getSupervisor());
-            fields.add(emp.getGovernmentDetails().getSssNumber());
-            fields.add(emp.getGovernmentDetails().getPhilHealthNumber());
-            fields.add(emp.getGovernmentDetails().getTinNumber());
-            fields.add(emp.getGovernmentDetails().getPagIbigNumber());
-            fields.add(String.valueOf(emp.getCompensation().getBasicSalary()));
-            fields.add(String.valueOf(emp.getCompensation().getRiceSubsidy()));
-            fields.add(String.valueOf(emp.getCompensation().getPhoneAllowance()));
-            fields.add(String.valueOf(emp.getCompensation().getClothingAllowance()));
-
-            fw.write(toCSVLine(fields));
-            fw.write(System.lineSeparator());
         }
     }
+
+    if (!found) {
+        tempFile.delete(); // Cleanup if not found
+        return false;
+    }
+
+    // Replace old file
+    if (inputFile.delete() && tempFile.renameTo(inputFile)) {
+        return true;
+    } else {
+        throw new IOException("Failed to replace original CSV with updated data.");
+    }
+}
+    
+    private void appendEmployeeToCSV(EmployeeData emp) throws IOException {
+    File file = new File(EMPLOYEE_CSV_FILE);
+    boolean writeHeader = !file.exists() || file.length() == 0;
+
+    try (FileWriter fw = new FileWriter(file, true);
+         BufferedWriter bw = new BufferedWriter(fw)) {
+
+        if (writeHeader) {
+            String header = "EmployeeID,LastName,FirstName,BirthDate,Address,Phone,Position,Status,Supervisor,SSS,PhilHealth,TIN,PagIbig,BasicSalary,RiceSubsidy,PhoneAllowance,ClothingAllowance";
+            bw.write(header);
+            bw.newLine();
+        }
+
+        String birthDateStr = new SimpleDateFormat("MM/dd/yyyy").format(emp.getBirthDate());
+
+        StringBuilder line = new StringBuilder();
+        line.append(emp.getEmployeeId()).append(",")
+            .append(emp.getLastName()).append(",")
+            .append(emp.getFirstName()).append(",")
+            .append(birthDateStr).append(",")
+            .append(emp.getAddress()).append(",")
+            .append(emp.getPhoneNumber()).append(",")
+            .append(emp.getPosition()).append(",")
+            .append(emp.getStatus()).append(",")
+            .append(emp.getSupervisor()).append(",")
+            .append(emp.getGovernmentDetails().getSssNumber()).append(",")
+            .append(emp.getGovernmentDetails().getPhilHealthNumber()).append(",")
+            .append(emp.getGovernmentDetails().getTinNumber()).append(",")
+            .append(emp.getGovernmentDetails().getPagIbigNumber()).append(",")
+            .append(emp.getCompensation().getBasicSalary()).append(",")
+            .append(emp.getCompensation().getRiceSubsidy()).append(",")
+            .append(emp.getCompensation().getPhoneAllowance()).append(",")
+            .append(emp.getCompensation().getClothingAllowance());
+
+        bw.write(line.toString());
+        bw.newLine();
+    }
+}
 
     private String toCSVLine(List<String> fields) {
         StringBuilder sb = new StringBuilder();
