@@ -5,6 +5,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.io.FileWriter;
+import java.io.IOException;
 
 /**
  * Handles CSV import and export functionality for Employee and Payroll data.
@@ -88,4 +90,46 @@ public final class CSVHandler {
         System.out.println("Failed to parse " + type + " from: '" + input + "', defaulting to " + defaultValue);
         return defaultValue;
     }
+    
+    public static void saveEmployeesToCSV(String filePath, List<EmployeeData> employees) {
+    SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
+
+    try (FileWriter writer = new FileWriter(filePath)) {
+        // Write header
+        writer.write("EmployeeID,LastName,FirstName,BirthDate,Address,Phone,SSS,PhilHealth,TIN,PagIbig,Status,Position,Supervisor,BasicSalary,RiceSubsidy,PhoneAllowance,ClothingAllowance,GrossSemiMonthly,HourlyRate\n");
+
+        // Write employee data
+        for (EmployeeData emp : employees) {
+            CompensationDetails comp = emp.getCompensation();
+            GovernmentDetails gov = emp.getGovernmentDetails();
+
+            writer.write(String.format("%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+                    emp.getEmployeeId(),
+                    emp.getLastName(),
+                    emp.getFirstName(),
+                    emp.getBirthDate() != null ? sdf.format(emp.getBirthDate()) : "",
+                    emp.getAddress(),
+                    emp.getPhoneNumber(),
+                    gov.getSssNumber(),
+                    gov.getPhilHealthNumber(),
+                    gov.getTinNumber(),
+                    gov.getPagIbigNumber(),
+                    emp.getStatus(),
+                    emp.getPosition(),
+                    emp.getSupervisor(),
+                    comp.getBasicSalary(),
+                    comp.getRiceSubsidy(),
+                    comp.getPhoneAllowance(),
+                    comp.getClothingAllowance(),
+                    comp.getGrossSemiMonthlyRate(),
+                    comp.getHourlyRate()
+            ));
+        }
+
+        System.out.println("Employee data saved to CSV: " + filePath);
+
+    } catch (IOException e) {
+        System.out.println("Error saving to CSV: " + e.getMessage());
+    }
+}
 }
