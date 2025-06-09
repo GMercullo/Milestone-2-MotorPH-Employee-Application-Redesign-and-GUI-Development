@@ -42,6 +42,12 @@ public class HW2 extends JFrame {
         setVisible(true);
     }
 
+    private void refreshAllEmployeePanel() {
+        mainPanel.remove(mainPanel.getComponent(1)); // Assumes "allEmployees" panel is at index 1
+        mainPanel.add(createAllEmployeePanel(), "allEmployees");
+        cardLayout.show(mainPanel, "allEmployees");
+    }
+
         private JPanel createHomePanel() {
         JPanel panel = new JPanel(new BorderLayout());
         JLabel title = new JLabel("MotorPH Employee App", SwingConstants.CENTER);
@@ -117,10 +123,11 @@ public class HW2 extends JFrame {
     }
 
     private JPanel createTableHeader() {
-        JPanel header = new JPanel(new GridLayout(1, 8));
+        JPanel header = new JPanel(new GridLayout(1, 10));
+        JPanel row = new JPanel(new GridLayout(1, 10));
         header.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLACK));
 
-        String[] labels = {"Employee #", "Last Name", "First Name", "SSS #", "PhilHealth #", "TIN #", "Pag-IBIG #", ""};
+        String[] labels = {"Employee #", "Last Name", "First Name", "SSS #", "PhilHealth #", "TIN #", "Pag-IBIG #", "View", "Update", "Delete"};
         for (String label : labels) {
             JLabel lbl = new JLabel(label);
             lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
@@ -144,12 +151,43 @@ public class HW2 extends JFrame {
         row.add(new JLabel(gov.getTinNumber()));
         row.add(new JLabel(gov.getPagIbigNumber()));
 
-        JButton viewButton = new JButton("View Employee");
+        JButton viewButton = new JButton("View");
         viewButton.addActionListener(e -> showEmployeeDetails(emp));
+        
+        JButton updateButton = new JButton("Update");
+        updateButton.addActionListener(e -> {
+            NewEmployeeRecord dialog = new NewEmployeeRecord(this, emp);
+            dialog.setVisible(true);
+            EmployeeData updated = dialog.getNewEmployee();
+            if (updated != null) {
+                employeeManager.updateEmployee(updated.getEmployeeId(), updated);
+                JOptionPane.showMessageDialog(this, "Employee updated!");
+                refreshAllEmployeePanel();
+            }
+        });
+        
+        JButton deleteButton = new JButton("Delete");
+        deleteButton.addActionListener(e -> {
+          int confirm = JOptionPane.showConfirmDialog(this, "Are you sure?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+          if (confirm == JOptionPane.YES_OPTION) {
+              employeeManager.deleteEmployee(emp.getEmployeeId());
+              JOptionPane.showMessageDialog(this, "Employee deleted!");
+              refreshAllEmployeePanel();
+          }
+        });
+        
         row.add(viewButton);
-
+        row.add(updateButton);
+        row.add(deleteButton);
+        
         return row;
     }
+
+    private void refreshAllEmployeesPanel() {
+    mainPanel.remove(mainPanel.getComponent(1)); // Remove the old "allEmployees"
+    mainPanel.add(createAllEmployeePanel(), "allEmployees"); // Add refreshed version
+    cardLayout.show(mainPanel, "allEmployees");
+}
 
     private void showEmployeeDetails(EmployeeData emp) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy");
