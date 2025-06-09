@@ -10,14 +10,16 @@ import java.util.*;
 public class Employee {
 
     private Map<Integer, EmployeeData> employeeMap = new HashMap<>();
+    private String filePath;
 
     public void loadEmployeesFromCSV(String filePath) {
+        this.filePath = filePath;
         try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
             String[] tokens;
             reader.readNext(); // Skip header
 
             while ((tokens = reader.readNext()) != null) {
-                if (tokens.length < 19) {
+                if (tokens.length < 18) {
                     System.out.println("Skipping line (too few columns): " + Arrays.toString(tokens));
                     continue;
                 }
@@ -91,7 +93,11 @@ public class Employee {
     public EmployeeData getEmployeeById(int id) {
         return employeeMap.get(id);
     }
-
+    
+     public EmployeeData findById(int id) { 
+        return employeeMap.get(id); 
+    }
+        
     public List<EmployeeData> getAllEmployees() {
         return new ArrayList<>(employeeMap.values());
     }
@@ -104,4 +110,24 @@ public class Employee {
             System.out.println("Added new employee: " + newEmp.getEmployeeId());
         }
     }
+    
+    public void updateEmployee(int id, EmployeeData updatedEmp) {
+    if (employeeMap.containsKey(id)) {
+        employeeMap.put(id, updatedEmp);
+        System.out.println("Updated employee ID: " + id);
+        CSVHandler.saveEmployeesToCSV(filePath, getAllEmployees());
+    } else {
+        System.out.println("Employee ID not found: " + id);
+    }
+}
+
+    public void deleteEmployee(int id) {
+    if (employeeMap.containsKey(id)) {
+        employeeMap.remove(id);
+        System.out.println("Deleted employee ID: " + id);
+        CSVHandler.saveEmployeesToCSV(filePath, getAllEmployees());
+    } else {
+        System.out.println("Employee ID not found: " + id);
+    }
+}
 }
