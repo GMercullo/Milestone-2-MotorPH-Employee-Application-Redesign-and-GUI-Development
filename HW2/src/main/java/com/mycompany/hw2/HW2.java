@@ -85,11 +85,27 @@ public class HW2 extends JFrame {
                 refreshAllEmployeePanel(); // Refresh after addition
             }
         });
+        
+        // Button to search employee by ID
+        JButton searchByIdButton = new JButton("Search Employee");
+        searchByIdButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        searchByIdButton.setMaximumSize(new Dimension(200, 40));
+        searchByIdButton.addActionListener(e -> showSearchEmployeeDialog());
+        
+        // Button to search pay coverage
+        JButton searchPayCoverageButton = new JButton("Pay Coverage");
+        searchPayCoverageButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        searchPayCoverageButton.setMaximumSize(new Dimension(200, 40));
+        searchPayCoverageButton.addActionListener(e -> showSearchPayCoverageDialog());
 
         center.add(Box.createRigidArea(new Dimension(0, 20)));
         center.add(viewAllButton);
         center.add(Box.createRigidArea(new Dimension(0, 10)));
         center.add(addEmployeeButton);
+        center.add(Box.createRigidArea(new Dimension(0, 10)));
+        center.add(searchByIdButton);
+        center.add(Box.createRigidArea(new Dimension(0, 10)));
+        center.add(searchPayCoverageButton);
 
         panel.add(title, BorderLayout.NORTH);
         panel.add(center, BorderLayout.CENTER);
@@ -223,6 +239,7 @@ public class HW2 extends JFrame {
             money.format(comp.getGrossSemiMonthlyRate()),
             money.format(comp.getHourlyRate())
         );
+        
 
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.add(new JLabel(details), BorderLayout.CENTER);
@@ -265,6 +282,118 @@ public class HW2 extends JFrame {
         // Show employee detail dialog
         JOptionPane.showMessageDialog(this, panel, "Employee Details", JOptionPane.INFORMATION_MESSAGE);
     }
+    
+    private void showEmployeeInfoReadOnly(EmployeeData emp) {
+    SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy");
+    CompensationDetails comp = emp.getCompensation();
+
+    String details = String.format(
+        "<html><body style='width: 400px;'>"
+        + "<b>ID:</b> %d<br>"
+        + "<b>Name:</b> %s<br>"
+        + "<b>Birthdate:</b> %s<br>"
+        + "<b>Address:</b> %s<br>"
+        + "<b>Phone:</b> %s<br>"
+        + "<b>Position:</b> %s<br>"
+        + "<b>Status:</b> %s<br>"
+        + "<b>Supervisor:</b> %s<br><br>"
+        + "<b>SSS:</b> %s<br>"
+        + "<b>PhilHealth:</b> %s<br>"
+        + "<b>Pag-IBIG:</b> %s<br>"
+        + "<b>TIN:</b> %s<br><br>"
+        + "<b>Basic Salary:</b> %s<br>"
+        + "<b>Rice Subsidy:</b> %s<br>"
+        + "<b>Phone Allowance:</b> %s<br>"
+        + "<b>Clothing Allowance:</b> %s<br>"
+        + "<b>Gross Semi-Monthly:</b> %s<br>"
+        + "<b>Hourly Rate:</b> %s<br>"
+        + "</body></html>",
+        emp.getEmployeeId(),
+        emp.getFullName(),
+        dateFormat.format(emp.getBirthDate()),
+        emp.getAddress(),
+        emp.getPhoneNumber(),
+        emp.getPosition(),
+        emp.getStatus(),
+        emp.getSupervisor(),
+        emp.getGovernmentDetails().getSssNumber(),
+        emp.getGovernmentDetails().getPhilHealthNumber(),
+        emp.getGovernmentDetails().getPagIbigNumber(),
+        emp.getGovernmentDetails().getTinNumber(),
+        money.format(comp.getBasicSalary()),
+        money.format(comp.getRiceSubsidy()),
+        money.format(comp.getPhoneAllowance()),
+        money.format(comp.getClothingAllowance()),
+        money.format(comp.getGrossSemiMonthlyRate()),
+        money.format(comp.getHourlyRate())
+    );
+
+    JPanel panel = new JPanel(new BorderLayout());
+    panel.add(new JLabel(details), BorderLayout.CENTER);
+    JOptionPane.showMessageDialog(this, panel, "Employee Info", JOptionPane.INFORMATION_MESSAGE);
+}
+    
+    private void showSearchEmployeeDialog() {
+    String input = JOptionPane.showInputDialog(this, "Enter Employee ID:");
+    if (input != null && !input.trim().isEmpty()) {
+        try {
+            int empId = Integer.parseInt(input.trim());
+            EmployeeData emp = employeeManager.findById(empId);
+            if (emp != null) {
+                showEmployeeInfoReadOnly(emp); // Show in read-only mode
+            } else {
+                JOptionPane.showMessageDialog(this, "Employee not found.");
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Invalid Employee ID. Please enter a valid number.");
+        }
+    }
+}
+    
+    private void showSearchPayCoverageDialog() {
+    // First prompt for Employee ID only
+    String inputId = JOptionPane.showInputDialog(this, "Enter Employee ID:");
+    if (inputId == null || inputId.trim().isEmpty()) return;
+
+    try {
+        int empId = Integer.parseInt(inputId.trim());
+        EmployeeData emp = employeeManager.findById(empId);
+
+        if (emp == null) {
+            JOptionPane.showMessageDialog(this, "Employee not found.");
+            return;
+        }
+
+        // Get all months that have attendance records for this employee
+        Attendance attendance = new Attendance();
+        List<String> availableMonths = attendance.getAvailableMonths(empId); // you'll implement this
+
+        if (availableMonths.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No attendance records found.");
+            return;
+        }
+
+        // Build dropdown UI
+        JComboBox<String> monthCombo = new JComboBox<>();
+        for (String month : availableMonths) {
+            monthCombo.addItem(month); // Expected format: MM-yyyy
+        }
+
+        JPanel panel = new JPanel(new GridLayout(2, 1, 10, 10));
+        panel.add(new JLabel("Select Month with Available Attendance:"));
+        panel.add(monthCombo);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Search Pay Coverage", JOptionPane.OK_CANCEL_OPTION);
+        if (result == JOptionPane.OK_OPTION) {
+            String selectedMonth = (String) monthCombo.getSelectedItem();
+            PayrollService(emp, selectedMonth); // Reuse your existing method
+        }
+
+    } catch (NumberFormatException e) {
+        JOptionPane.showMessageDialog(this, "Invalid Employee ID. Please enter a valid number.");
+    }
+}
+
 
     // Prompts for month and triggers payroll calculation
     private void showMonthInputDialog(EmployeeData emp) {
