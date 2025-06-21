@@ -23,8 +23,9 @@ public class EmployeeData {
 
     // Grouped details for compensation and government info
     private CompensationDetails compensation;
-    private GovernmentDetails governmentDetails; 
-    
+    private GovernmentDetails governmentDetails;
+
+
     // Constructor to initialize all employee data
     public EmployeeData(
             int employeeId, String firstName, String lastName, Date birthDate, String address, String phoneNumber, String status, String position, String departmentSupervisor, CompensationDetails compensation, GovernmentDetails governmentDetails) {

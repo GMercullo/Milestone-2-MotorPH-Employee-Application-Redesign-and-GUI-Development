@@ -39,7 +39,7 @@ public class Employee {
 
                 try {
                     // Parse the employee data and add to the map
-                    EmployeeData emp = parseEmployee(tokens);
+                    EmployeeData emp = CSVHandler.parseEmployeeRow(tokens);
                     employeeMap.put(emp.getEmployeeId(), emp);
                     System.out.println("Loaded employee ID: " + emp.getEmployeeId());
                 } catch (Exception ex) {
@@ -49,65 +49,6 @@ public class Employee {
         } catch (IOException | CsvValidationException e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Parses a CSV line into an EmployeeData object using the given token array.
-     *
-     * @param tokens a single row from the CSV file split into an array
-     * @return the constructed EmployeeData object
-     */
-    private EmployeeData parseEmployee(String[] tokens) {
-        int employeeId = CSVHandler.parseInt(tokens[0]);
-        String lastName = tokens[1].trim();
-        String firstName = tokens[2].trim();
-        Date birthDate = CSVHandler.parseDate(tokens[3]);
-        String address = tokens[4].trim();
-        String phone = tokens[5].trim();
-        String sssNumber = tokens[6].trim();
-        String philHealthNumber = tokens[7].trim();
-        String tinNumber = tokens[8].trim();
-        String pagIbigNumber = tokens[9].trim();
-        String status = tokens[10].trim();
-        String position = tokens[11].trim();
-        String departmentSupervisor = tokens[12].trim();
-
-        double basicSalary = CSVHandler.parseDouble(tokens[13]);
-        double riceSubsidy = CSVHandler.parseDouble(tokens[14]);
-        double phoneAllowance = CSVHandler.parseDouble(tokens[15]);
-        double clothingAllowance = CSVHandler.parseDouble(tokens[16]);
-        double grossSemiMonthlyRate = CSVHandler.parseDouble(tokens[17]);
-        double hourlyRate = CSVHandler.parseDouble(tokens[18]);
-
-        CompensationDetails compensation = new CompensationDetails(
-            basicSalary,
-            riceSubsidy,
-            phoneAllowance,
-            clothingAllowance,
-            grossSemiMonthlyRate,
-            hourlyRate
-        );
-
-        GovernmentDetails govDetails = new GovernmentDetails(
-            sssNumber,
-            philHealthNumber,
-            tinNumber,
-            pagIbigNumber
-        );
-
-        return new EmployeeData(
-            employeeId,
-            firstName,
-            lastName,
-            birthDate,
-            address,
-            phone,
-            status,
-            position,
-            departmentSupervisor,
-            compensation,
-            govDetails
-        );
     }
 
     /**
@@ -139,6 +80,8 @@ public class Employee {
         return new ArrayList<>(employeeMap.values());
     }
 
+
+
     /**
      * Adds a new employee to the system. If the ID already exists, the employee is not added.
      *
@@ -163,22 +106,25 @@ public class Employee {
         if (employeeMap.containsKey(id)) {
             employeeMap.put(id, updatedEmp);
             System.out.println("Updated employee ID: " + id);
-            CSVHandler.saveEmployeesToCSV(filePath, getAllEmployees());
+            try {
+                CSVHandler.saveEmployeeToCSV(filePath, getAllEmployees());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else {
             System.out.println("Employee ID not found: " + id);
         }
     }
 
-    /**
-     * Deletes an employee from the system by ID and updates the CSV file.
-     *
-     * @param id the employee ID to delete
-     */
     public void deleteEmployee(int id) {
         if (employeeMap.containsKey(id)) {
             employeeMap.remove(id);
             System.out.println("Deleted employee ID: " + id);
-            CSVHandler.saveEmployeesToCSV(filePath, getAllEmployees());
+            try {
+                CSVHandler.saveEmployeeToCSV(filePath, getAllEmployees());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else {
             System.out.println("Employee ID not found: " + id);
         }

@@ -5,6 +5,7 @@ package com.mycompany.hw2;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -13,8 +14,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
 
 public class HW2 extends JFrame {
+
 
     // Layout manager to switch between panels
     private CardLayout cardLayout;
@@ -31,12 +34,16 @@ public class HW2 extends JFrame {
     // Format for displaying hours
     private final DecimalFormat hoursFormat = new DecimalFormat("#0.##");
 
-    // Constructor to set up the main GUI
-    public HW2() {
-        setTitle("MotorPH Employee App");
+    // Accepts and show user role when logging in
+    private String role;
+
+    public HW2(String userRole) {
+        this.role = userRole;
+        setTitle("MotorPH Payroll System - Logged in as " + role);
         setSize(900, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
 
         // Load employee data from CSV
         employeeManager = new Employee();
@@ -71,25 +78,9 @@ public class HW2 extends JFrame {
         viewAllButton.setMaximumSize(new Dimension(200, 40));
         viewAllButton.addActionListener(e -> cardLayout.show(mainPanel, "allEmployees"));
 
-        // Button to add new employee
-        JButton addEmployeeButton = new JButton("Add New Employee");
-        addEmployeeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        addEmployeeButton.setMaximumSize(new Dimension(200, 40));
-        addEmployeeButton.addActionListener(e -> {
-            NewEmployeeRecord dialog = new NewEmployeeRecord(this);
-            dialog.setVisible(true);
-            EmployeeData newEmp = dialog.getNewEmployee();
-            if (newEmp != null) {
-                employeeManager.addEmployee(newEmp);
-                JOptionPane.showMessageDialog(this, "Employee added!");
-                refreshAllEmployeePanel(); // Refresh after addition
-            }
-        });
-
         center.add(Box.createRigidArea(new Dimension(0, 20)));
         center.add(viewAllButton);
         center.add(Box.createRigidArea(new Dimension(0, 10)));
-        center.add(addEmployeeButton);
 
         panel.add(title, BorderLayout.NORTH);
         panel.add(center, BorderLayout.CENTER);
@@ -105,6 +96,26 @@ public class HW2 extends JFrame {
         JButton backButton = new JButton("Back to Home");
         backButton.addActionListener(e -> cardLayout.show(mainPanel, "home"));
         topPanel.add(backButton, BorderLayout.WEST);
+
+        // Add New Employee button (right)
+        JButton newEmployeeButton = new JButton("Add New Employee");
+        newEmployeeButton.addActionListener(e -> {
+            NewEmployeeRecord dialog = new NewEmployeeRecord(this);
+            dialog.setVisible(true);
+            EmployeeData newEmp = dialog.getNewEmployee();
+            if (newEmp != null) {
+                employeeManager.addEmployee(newEmp);
+                try {
+                    CSVHandler.appendEmployeeToCSV("src/MotorPH Employee Data - Employee Details.csv", newEmp);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(this, "Error saving employee: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+                JOptionPane.showMessageDialog(this, "Employee added!");
+                refreshAllEmployeePanel(); // Refresh after addition
+            }
+        });
+        topPanel.add(newEmployeeButton, BorderLayout.EAST);
 
         JLabel title = new JLabel("All MotorPH Employee Records", SwingConstants.CENTER);
         title.setFont(new Font("Arial", Font.BOLD, 18));
@@ -136,7 +147,7 @@ public class HW2 extends JFrame {
 
         String[] labels = {
             "Employee #", "Last Name", "First Name", "SSS #",
-            "PhilHealth #", "TIN #", "Pag-IBIG #", "View"
+            "PhilHealth #", "TIN #", "Pag-IBIG #", ""
         };
 
         for (String label : labels) {
@@ -163,10 +174,40 @@ public class HW2 extends JFrame {
         row.add(new JLabel(gov.getTinNumber()));
         row.add(new JLabel(gov.getPagIbigNumber()));
 
+        // Action Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+
         JButton viewButton = new JButton("View");
         viewButton.addActionListener(e -> showEmployeeDetails(emp));
-        row.add(viewButton);
 
+        // Button to update employee
+        JButton updateButton = new JButton("Update");
+        updateButton.addActionListener(e -> {
+            NewEmployeeRecord dialog = new NewEmployeeRecord(this, emp);
+            dialog.setVisible(true);
+            EmployeeData updated = dialog.getNewEmployee();
+            if (updated != null) {
+                employeeManager.updateEmployee(updated.getEmployeeId(), updated);
+                JOptionPane.showMessageDialog(this, "Employee updated!");
+                refreshAllEmployeePanel();
+            }
+        });
+
+        // Button to delete employee
+        JButton deleteButton = new JButton("Delete");
+        deleteButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this, "Are you sure?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                employeeManager.deleteEmployee(emp.getEmployeeId());
+                JOptionPane.showMessageDialog(this, "Employee deleted!");
+                refreshAllEmployeePanel();
+            }
+        });
+        buttonPanel.add(viewButton);
+        buttonPanel.add(updateButton);
+        buttonPanel.add(deleteButton);
+
+        row.add(buttonPanel); // Add the panel containing all buttons
         return row;
     }
 
@@ -231,33 +272,7 @@ public class HW2 extends JFrame {
         JButton calcButton = new JButton("Calculate Monthly Salary");
         calcButton.addActionListener(e -> showMonthInputDialog(emp));
 
-        // Button to update employee
-        JButton updateButton = new JButton("Update");
-        updateButton.addActionListener(e -> {
-            NewEmployeeRecord dialog = new NewEmployeeRecord(this, emp);
-            dialog.setVisible(true);
-            EmployeeData updated = dialog.getNewEmployee();
-            if (updated != null) {
-                employeeManager.updateEmployee(updated.getEmployeeId(), updated);
-                JOptionPane.showMessageDialog(this, "Employee updated!");
-                refreshAllEmployeePanel();
-            }
-        });
-
-        // Button to delete employee
-        JButton deleteButton = new JButton("Delete");
-        deleteButton.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this, "Are you sure?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
-            if (confirm == JOptionPane.YES_OPTION) {
-                employeeManager.deleteEmployee(emp.getEmployeeId());
-                JOptionPane.showMessageDialog(this, "Employee deleted!");
-                refreshAllEmployeePanel();
-            }
-        });
-
         JPanel buttonPanel = new JPanel();
-        buttonPanel.add(updateButton);
-        buttonPanel.add(deleteButton);
         buttonPanel.add(calcButton);
 
         panel.add(buttonPanel, BorderLayout.SOUTH);
@@ -269,34 +284,50 @@ public class HW2 extends JFrame {
     // Prompts for month and triggers payroll calculation
     private void showMonthInputDialog(EmployeeData emp) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JTextField monthField = new JTextField(10);
-        monthField.setToolTipText("Format: MM-YYYY (e.g., 06-2024)");
 
-        panel.add(new JLabel("Enter Month:"));
-        panel.add(monthField);
+        // Month dropdown with full names
+        String[] monthNames = {
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+        };
+        JComboBox<String> monthCombo = new JComboBox<>(monthNames);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Enter Month", JOptionPane.OK_CANCEL_OPTION);
+        // Year dropdown
+        int currentYear = YearMonth.now().getYear();
+        JComboBox<Integer> yearCombo = new JComboBox<>();
+        for (int year = 2000; year <= currentYear + 20; year++) {
+            yearCombo.addItem(year);
+        }
+
+        panel.add(new JLabel("Select Month:"));
+        panel.add(monthCombo);
+        panel.add(new JLabel("Select Year:"));
+        panel.add(yearCombo);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Select Month and Year", JOptionPane.OK_CANCEL_OPTION);
 
         if (result == JOptionPane.OK_OPTION) {
-            String input = monthField.getText().trim();
+            String monthName = (String) monthCombo.getSelectedItem();
+            int monthIndex = monthCombo.getSelectedIndex() + 1; // convert to 1-based month
+            int selectedYear = (int) yearCombo.getSelectedItem();
 
-            if (input.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please enter a month.");
-                return;
-            }
+            // Format as "MM-yyyy" for internal processing
+            String monthFormatted = String.format("%02d-%d", monthIndex, selectedYear);
 
             try {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-yyyy");
-                YearMonth yearMonth = YearMonth.parse(input, formatter);
-                String targetMonth = yearMonth.format(formatter);
+                YearMonth yearMonth = YearMonth.parse(monthFormatted, formatter);
 
-                if (monthExistsInAttendance(emp.getEmployeeId(), targetMonth)) {
-                    PayrollService(emp, targetMonth);
+                // Use for display: "June 2025"
+                String displayMonthYear = monthName + " " + selectedYear;
+
+                if (monthExistsInAttendance(emp.getEmployeeId(), monthFormatted)) {
+                    PayrollService(emp, monthFormatted); // Still use MM-yyyy format internally
                 } else {
-                    JOptionPane.showMessageDialog(this, "No attendance records found for " + targetMonth + ".");
+                    JOptionPane.showMessageDialog(this, "No attendance records found for " + displayMonthYear + ".");
                 }
             } catch (DateTimeParseException ex) {
-                JOptionPane.showMessageDialog(this, "Invalid format. Please use MM-YYYY.");
+                JOptionPane.showMessageDialog(this, "Unexpected error parsing the selected date.");
             }
         }
     }
@@ -310,8 +341,9 @@ public class HW2 extends JFrame {
     // Performs full payroll calculation and displays the report
     private void PayrollService(EmployeeData empData, String monthInput) {
         try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-yyyy");
-            YearMonth monthYear = YearMonth.parse(monthInput, formatter);
+            DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-yyyy");
+            DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("MMMM yyyy");
+            YearMonth monthYear = YearMonth.parse(monthInput, inputFormatter);
             LocalDate start = monthYear.atDay(1);
             LocalDate end = monthYear.atEndOfMonth();
 
@@ -355,7 +387,7 @@ public class HW2 extends JFrame {
             summary.setValue("Clothing Allowance:", money.format(clothing));
             summary.setValue("Gross Semi-Monthly Salary:", money.format(empData.getCompensation().getGrossSemiMonthlyRate()));
             summary.setValue("Hourly Rate:", money.format(hourlyRate));
-            summary.setValue("Month:", monthInput);
+            summary.setValue("Month:", monthYear.format(outputFormatter));
 
             summary.setValue("Regular Hours:", hoursFormat.format(regularHours));
             summary.setValue("Overtime Hours:", hoursFormat.format(overtimeHours));
@@ -383,8 +415,4 @@ public class HW2 extends JFrame {
         JOptionPane.showMessageDialog(null, scrollPane, "Payroll Report", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // Entry point of the application
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(HW2::new);
-    }
 }

@@ -1,10 +1,12 @@
 package com.mycompany.hw2;
 
-import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.logging.Logger;
+
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
 
 public class Payroll {
     private static final String EMPLOYEE_CSV_FILE = "src/MotorPH Employee Data - Employee Details.csv";
@@ -14,42 +16,41 @@ public class Payroll {
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
 
-        try (BufferedReader br = new BufferedReader(new FileReader(EMPLOYEE_CSV_FILE))) {
-            String line;
+        try (CSVReader reader = new CSVReader(new FileReader(EMPLOYEE_CSV_FILE))) {
+            String[] row;
             boolean isFirstLine = true;
 
-            while ((line = br.readLine()) != null) {
+            while ((row = reader.readNext()) != null) {
                 if (isFirstLine) {
-                    isFirstLine = false;  // skip header
+                    isFirstLine = false;
                     continue;
                 }
 
-                String[] cols = line.split(",", -1); // -1 to include trailing empty fields
-                if (cols.length < 17) {
-                    logger.warning("Invalid employee data row (expected 19 cols): " + line);
+                if (row.length < 17) {
+                    logger.warning("Invalid employee data row (expected at least 17 columns): " + String.join(",", row));
                     continue;
                 }
 
                 // Parse employee data from columns
-                String empNo = cols[0].trim();
-                String lastName = cols[1].trim();
-                String firstName = cols[2].trim();
-                String birthDate = cols[3].trim();
-                String address = cols[4].trim();
-                String phone = cols[5].trim();
-                String position = cols[6].trim();
-                String status = cols[7].trim();
-                String supervisor = cols[8].trim();
+                String empNo = row[0].trim();
+                String lastName = row[1].trim();
+                String firstName = row[2].trim();
+                String birthDate = row[3].trim();
+                String address = row[4].trim();
+                String phone = row[5].trim();
+                String position = row[6].trim();
+                String status = row[7].trim();
+                String supervisor = row[8].trim();
 
-                String sssNumber = cols[9].trim();
-                String philHealthNumber = cols[10].trim();
-                String tinNumber = cols[11].trim();
-                String pagIbigNumber = cols[12].trim();
+                String sssNumber = row[9].trim();
+                String philHealthNumber = row[10].trim();
+                String tinNumber = row[11].trim();
+                String pagIbigNumber = row[12].trim();
 
-                double monthlySalary = CSVHandler.parseDouble(cols[13]);
-                double riceSubsidy = CSVHandler.parseDouble(cols[14]);
-                double phoneSubsidy = CSVHandler.parseDouble(cols[15]);
-                double clothingAllowance = CSVHandler.parseDouble(cols[16]);
+                double monthlySalary = CSVHandler.parseDouble(row[13]);
+                double riceSubsidy = CSVHandler.parseDouble(row[14]);
+                double phoneSubsidy = CSVHandler.parseDouble(row[15]);
+                double clothingAllowance = CSVHandler.parseDouble(row[16]);
 
                 double semiMonthly = monthlySalary / 2;
                 double hourlyRate = GrossWage.calculateHourlyRate(monthlySalary);
@@ -62,23 +63,23 @@ public class Payroll {
                     continue;
                 }
 
-                // Calculate attendance hours using your Attendance class (CSV based)
+                // Attendance calculation
                 Attendance attendance = new Attendance();
                 Attendance.HoursWorked hours = attendance.calculateHours(empId, start, end);
 
-                // Calculate gross wage
+                // Gross wage calculation
                 double gross = GrossWage.calculateGross(hourlyRate, hours.regularHours, hours.overtimeHours);
 
-                // Calculate deductions
+                // Deductions
                 double sss = Deductions.calculateSSS(gross);
                 double phil = Deductions.calculatePhilHealth(gross);
                 double pagibig = Deductions.calculatePagIbig(gross);
                 double tax = Deductions.calculateWithholdingTax(monthlySalary);
 
                 double net = gross - Deductions.getTotalDeduction(sss, phil, pagibig, tax)
-                             + riceSubsidy + phoneSubsidy + clothingAllowance;
+                        + riceSubsidy + phoneSubsidy + clothingAllowance;
 
-                // Populate payroll report GUI
+                // GUI Payroll Report
                 PayrollReport reportPanel = new PayrollReport();
                 reportPanel.setValue("Employee #:", empNo);
                 reportPanel.setValue("Last Name:", lastName);
@@ -115,11 +116,11 @@ public class Payroll {
 
                 reportPanel.setValue("Net Salary:", String.format("%.2f", net));
 
-                // Display the payroll report GUI (your HW2 class must implement this method)
                 HW2.displayPayrollReport(reportPanel);
             }
-        } catch (IOException e) {
-            logger.warning("Error reading employee CSV file: " + e.getMessage());
+
+        } catch (IOException | CsvValidationException e) {
+            logger.severe("Error reading employee CSV file: " + e.getMessage());
         }
     }
 }
