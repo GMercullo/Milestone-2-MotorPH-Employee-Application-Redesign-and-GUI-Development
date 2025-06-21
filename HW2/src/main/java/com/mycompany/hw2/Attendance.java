@@ -10,6 +10,10 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -160,5 +164,37 @@ public class Attendance {
        }
 
        return false;
-   }
+    }
+    
+    public List<String> getAvailableMonths(int employeeId) {
+        Set<String> uniqueMonths = new LinkedHashSet<>();
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MM-yyyy");
+
+        try (BufferedReader br = new BufferedReader(new FileReader(ATTENDANCE_CSV_FILE))) {
+            String line;
+            boolean isFirstLine = true;
+
+            while ((line = br.readLine()) != null) {
+                if (isFirstLine) {
+                    isFirstLine = false;
+                    continue; // Skip header
+                }
+
+                String[] parts = line.split(",");
+                if (parts.length < 6) continue;
+
+                int id = CSVHandler.parseInt(parts[0]);
+                LocalDate date = parseDate(parts[3].trim());
+
+                if (id != employeeId || date == null) continue;
+
+                String formattedMonth = date.format(monthFormatter);
+                uniqueMonths.add(formattedMonth);
+            }
+        } catch (IOException e) {
+            logger.warning("Error reading attendance file for available months: " + e.getMessage());
+        }
+
+        return new ArrayList<>(uniqueMonths);
+    }
 }
