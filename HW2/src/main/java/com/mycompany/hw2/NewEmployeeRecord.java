@@ -276,12 +276,38 @@ public class NewEmployeeRecord extends JDialog {
                 return false;
             }
         }
-
-        return true;
+        
+        // Validate name fields (letters only)
+    if (!firstNameField.getText().trim().matches("[a-zA-Z ]+")) {
+        JOptionPane.showMessageDialog(this, "First name must contain letters only.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+        firstNameField.requestFocus();
+        return false;
     }
+    if (!lastNameField.getText().trim().matches("[a-zA-Z ]+")) {
+        JOptionPane.showMessageDialog(this, "Last name must contain letters only.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+        lastNameField.requestFocus();
+        return false;
+    }
+
+    // Validate numeric fields (digits only)
+    JTextField[] numericFields = {phoneField, sssField, philHealthField, tinField, pagIbigField};
+    String[] numericLabels = {"Phone", "SSS #", "PhilHealth #", "TIN #", "Pag-IBIG #"};
+    for (int i = 0; i < numericFields.length; i++) {
+        if (!numericFields[i].getText().trim().matches("[0-9\\- ]+")) {
+            JOptionPane.showMessageDialog(this, numericLabels[i] + " must contain digits, dashes, or spaces only.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            numericFields[i].requestFocus();
+            return false;
+        }
+    }
+
+    return true;
+}
 
     private void showError(Exception ex) {
         JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         ex.printStackTrace();
     }
 }
+
+
+    
